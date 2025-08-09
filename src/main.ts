@@ -25,12 +25,21 @@ const defaultOrigins = [
   'http://127.0.0.1:3000',
   'https://bias-news-fe.vercel.app'
 ];
-const configuredOrigins = (process.env.CORS_ORIGINS || '')
+const configuredOriginsRaw = (process.env.CORS_ORIGINS || '')
   .split(',')
   .map(o => o.trim())
   .filter(Boolean);
-const allowAll = configuredOrigins.includes('*');
-const allowedOrigins = allowAll ? [] : (configuredOrigins.length ? configuredOrigins : defaultOrigins);
+const allowAll = configuredOriginsRaw.includes('*');
+// Merge (not replace) so defaults always apply unless overridden by '*'
+const allowedOrigins = allowAll
+  ? []
+  : Array.from(new Set([ ...defaultOrigins, ...configuredOriginsRaw ]));
+
+if (allowAll) {
+  console.log('[CORS] Allowing all origins due to * in CORS_ORIGINS');
+} else {
+  console.log('[CORS] Allowed origins:', allowedOrigins.join(', '));
+}
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -42,7 +51,7 @@ app.use(cors({
       const suffix = wildcard.substring(1); // remove leading *
       if (origin.endsWith(suffix)) return callback(null, true);
     }
-    console.warn(`CORS blocked origin: ${origin}`);
+    console.warn(`[CORS] Blocked origin: ${origin}`);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true
