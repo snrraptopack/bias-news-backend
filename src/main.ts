@@ -22,7 +22,8 @@ const PORT = process.env.PORT || 3001;
 const defaultOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'http://127.0.0.1:3000'
+  'http://127.0.0.1:3000',
+  'https://bias-news-fe.vercel.app'
 ];
 const configuredOrigins = (process.env.CORS_ORIGINS || '')
   .split(',')
