@@ -203,6 +203,45 @@ class BiasAnalyzer {
     const clampScore = (score: number) => Math.max(0, Math.min(100, score));
     const clampConfidence = (conf: number) => Math.max(0, Math.min(1, conf));
 
+    const sanitizePrimarySources = (sources: unknown): string[] => {
+      if (!Array.isArray(sources)) return [];
+      const seen = new Set<string>();
+      const cleaned: string[] = [];
+      for (const raw of sources) {
+        if (typeof raw !== 'string') continue;
+        let url = raw.trim();
+        if (!url) continue;
+        // Drop obviously internal / dev / API references or front-end routed paths
+        const lower = url.toLowerCase();
+        if (lower.includes('localhost:') || lower.includes('/api/articles/') || lower.startsWith('/')) continue;
+        // If it looks like a bare domain, attempt to prefix https
+        if (!/^https?:\/\//i.test(url)) {
+          if (/^[a-z0-9.-]+\.[a-z]{2,}(\/.*)?$/i.test(url)) {
+            url = 'https://' + url;
+          } else {
+            continue; // not a recognizable external source
+          }
+        }
+        // Basic URL validation
+        try {
+          const u = new URL(url);
+          if (!['http:', 'https:'].includes(u.protocol)) continue;
+          // discard if host still localhost like dev host
+          if (u.hostname === 'localhost') continue;
+          // remove tracking params (basic)
+          u.search = '';
+          const finalUrl = u.toString();
+          if (!seen.has(finalUrl)) {
+            seen.add(finalUrl);
+            cleaned.push(finalUrl);
+          }
+        } catch {
+          continue;
+        }
+      }
+      return cleaned.slice(0, 15); // enforce schema max
+    };
+
     const validatedAnalysis = {
       ideologicalStance: {
         score: clampScore(analysis.ideologicalStance?.score || 50),
@@ -240,7 +279,7 @@ class BiasAnalyzer {
         reasoning: analysis.sourceTransparency?.reasoning || "Analysis incomplete"
       },
       overallBiasLevel: clampScore(analysis.overallBiasLevel || 50),
-      primarySources: analysis.primarySources || [],
+  primarySources: sanitizePrimarySources(analysis.primarySources),
       analyzedAt: analysis.analyzedAt || new Date().toISOString()
     };
 
