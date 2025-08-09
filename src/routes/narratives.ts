@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db } from "../utils/database.ts";
-import type { Article } from "../utils/dataStore.ts";
+import { db } from "../utils/database";
+import type { Article } from "../utils/dataStore";
 
 interface NarrativeCluster {
   id: string;
@@ -365,7 +365,7 @@ function detectFramingShift(article: Article): string {
     "supporters claim",
   ];
 
-  const hasShiftLanguage = phrases.some((phrase) =>
+  const hasShiftLanguage = phrases.some((phrase: string) =>
     shiftIndicators.some((indicator) => phrase.toLowerCase().includes(indicator))
   );
 

@@ -1,8 +1,8 @@
 import { Router } from "express";
-import newsAPI from "../services/newsAPI.ts";
-import biasAnalyzer from "../services/biasAnalyzer.ts";
-import { db } from "../utils/database.ts";
-import type { BiasScores } from "../utils/dataStore.ts";
+import newsAPI from "../services/newsAPI";
+import biasAnalyzer from "../services/biasAnalyzer";
+import { db } from "../utils/database";
+import type { BiasScores, Article as StoredArticle } from "../utils/dataStore";
 
 // Lightweight concurrency mapper
 function mapWithConcurrency<T, R>(arr: T[], limit: number, worker: (item: T, index: number) => Promise<R>): Promise<R[]> {
@@ -207,8 +207,8 @@ router.post('/analyze', async (req, res) => {
 // GET /api/articles/diagnostics - Summary of analysis statuses
 router.get('/diagnostics/status', async (_req, res) => {
   try {
-    const articles = await db.loadArticles();
-    const summary = articles.reduce<Record<string, number>>((acc, a) => {
+  const articles = await db.loadArticles();
+  const summary = (articles as StoredArticle[]).reduce<Record<string, number>>((acc: Record<string, number>, a: StoredArticle) => {
       const status = a.biasScores?.analysisStatus || 'unknown';
       acc[status] = (acc[status] || 0) + 1;
       return acc;

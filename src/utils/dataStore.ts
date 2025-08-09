@@ -41,7 +41,7 @@ export interface Article {
 }
 
 // Re-export database functions for backward compatibility
-import { db } from "./database.ts";
+import { db } from "./database";
 export { db };
 
 export async function loadArticles(): Promise<Article[]> {
