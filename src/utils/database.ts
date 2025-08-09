@@ -1,11 +1,41 @@
 import sqlite3 from "sqlite3";
 import type { Article } from "./dataStore";
+import fs from 'fs';
+import path from 'path';
 
 class DatabaseManager {
-  private db: sqlite3.Database;
+  private db!: sqlite3.Database; // assigned in constructor with fallback
 
   constructor() {
-    this.db = new sqlite3.Database("./data/bias_news.db");
+    const configuredPath = process.env.DB_PATH || './data/bias_news.db';
+    const resolvedPath = path.isAbsolute(configuredPath)
+      ? configuredPath
+      : path.join(process.cwd(), configuredPath);
+
+    try {
+      const dir = path.dirname(resolvedPath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    } catch (e) {
+      console.error('Failed to ensure database directory:', e);
+    }
+
+    let opened = false;
+    try {
+      this.db = new sqlite3.Database(resolvedPath, (err) => {
+        if (err) {
+          console.error(`Error opening SQLite at ${resolvedPath}:`, err.message);
+        }
+      });
+      opened = true;
+    } catch (e) {
+      console.error('SQLite open threw synchronously:', e);
+    }
+
+  if (!opened || !this.db) {
+      console.warn('Falling back to in-memory SQLite (data will not persist). Set DB_PATH to a writable location.');
+      this.db = new sqlite3.Database(':memory:');
+    }
+
     this.initDatabase();
   }
 
