@@ -18,9 +18,32 @@ for (const envVar of requiredEnvVars) {
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
+// CORS Configuration (supports comma-separated CORS_ORIGINS env override)
+const defaultOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:3000'
+];
+const configuredOrigins = (process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+const allowAll = configuredOrigins.includes('*');
+const allowedOrigins = allowAll ? [] : (configuredOrigins.length ? configuredOrigins : defaultOrigins);
+
 app.use(cors({
-  origin: ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000"],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // non-browser or same-origin
+    if (allowAll || allowedOrigins.includes(origin)) return callback(null, true);
+    // Support subdomain wildcard like https://*.onrender.com if specified
+    const wildcard = allowedOrigins.find(o => o.startsWith('*.'));
+    if (wildcard) {
+      const suffix = wildcard.substring(1); // remove leading *
+      if (origin.endsWith(suffix)) return callback(null, true);
+    }
+    console.warn(`CORS blocked origin: ${origin}`);
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
